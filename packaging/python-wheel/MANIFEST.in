@@ -1,0 +1,3 @@
+include README.md
+recursive-include src/py_msbuild_extractor/bin *.exe
+recursive-include src/py_msbuild_extractor/licenses *

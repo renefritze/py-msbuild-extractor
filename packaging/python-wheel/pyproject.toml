@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-msbuild-extractor"
+dynamic = ["version"]
+description = "Windows-only pip launcher bundling microsoft/msbuild-extractor-sample (generates compile_commands.json from MSBuild/.vcxproj solutions)."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "py-msbuild-extractor contributors" }]
+keywords = [
+    "msbuild",
+    "compile_commands",
+    "vcxproj",
+    "clangd",
+    "compilation-database",
+    "windows",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Build Tools",
+]
+
+# The entry point subprocess-forwards argv to the bundled win-x64 executable.
+[project.scripts]
+msbuild-extractor = "py_msbuild_extractor._launcher:main"
+
+[project.urls]
+Homepage = "https://github.com/renefritze/py-msbuild-extractor"
+"Upstream project" = "https://github.com/microsoft/msbuild-extractor-sample"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# The .exe is dropped in by build.ps1 before the wheel is built; the upstream
+# license is copied alongside it so the redistributed binary carries its terms.
+[tool.setuptools.package-data]
+py_msbuild_extractor = ["bin/*.exe", "licenses/*"]

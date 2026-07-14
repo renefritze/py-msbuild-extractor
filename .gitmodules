@@ -1,0 +1,3 @@
+[submodule "vendor/msbuild-extractor-sample"]
+	path = vendor/msbuild-extractor-sample
+	url = https://github.com/microsoft/msbuild-extractor-sample.git

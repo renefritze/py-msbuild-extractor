@@ -1,0 +1,103 @@
+name: build-and-publish
+
+# Builds the Windows wheel on every push/PR. On a version tag (v*), the built
+# wheel is published to PyPI. The wheel version is derived from the tag so it
+# never drifts from the release.
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build win_amd64 wheel
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - name: Checkout (with vendored submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve version from tag
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $v = $env:GITHUB_REF -replace '^refs/tags/v', ''
+          } else {
+            $v = '0.0.0.dev0'
+          }
+          if ([string]::IsNullOrWhiteSpace($v)) { throw "Version not resolved" }
+          # Single-sourced version consumed by setup.py for the wheel metadata.
+          "MSBUILD_EXTRACTOR_VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Building version $v"
+
+      - name: Build bundled win-x64 executable
+        shell: pwsh
+        working-directory: packaging/python-wheel
+        run: ./build.ps1
+
+      - name: Build wheel
+        shell: pwsh
+        working-directory: packaging/python-wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist
+          Get-ChildItem dist
+
+      - name: Verify wheel platform tag
+        shell: pwsh
+        working-directory: packaging/python-wheel
+        run: |
+          $wheel = Get-ChildItem dist/*.whl | Select-Object -First 1
+          Write-Host "Built: $($wheel.Name)"
+          if ($wheel.Name -notmatch 'win_amd64') {
+            throw "Expected a win_amd64 platform wheel, got '$($wheel.Name)'."
+          }
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: packaging/python-wheel/dist/*.whl
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # OIDC token for PyPI trusted publishing
+    steps:
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

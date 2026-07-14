@@ -1,0 +1,11 @@
+# Bundled artifacts produced by packaging/python-wheel/build.ps1
+# (generated, never committed — the wheel is built fresh in CI)
+packaging/python-wheel/src/py_msbuild_extractor/bin/*.exe
+packaging/python-wheel/src/py_msbuild_extractor/licenses/
+packaging/python-wheel/build/
+packaging/python-wheel/dist/
+**/*.egg-info/
+
+# Python bytecode
+__pycache__/
+*.py[cod]

@@ -1,0 +1,3 @@
+# The self-contained win-x64 executable (msbuild-extractor.exe) is dropped into
+# this directory by ../../build.ps1 before the wheel is built. It is generated,
+# not committed (see the repository .gitignore).
