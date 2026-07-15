@@ -36,7 +36,7 @@ To bump to a new upstream commit:
    - `README.md` (the "Pinned upstream commit" section)
 
 4. Check whether `packaging/python-wheel/patches/*.patch` still apply cleanly
-   against the new commit (`build.ps1` will fail loudly if not):
+   against the new commit (`build.ps1`/`build.sh` will fail loudly if not):
 
    ```bash
    for p in packaging/python-wheel/patches/*.patch; do
@@ -66,18 +66,28 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-The `build-and-publish` workflow builds the `win_amd64` wheel from the tag and
-publishes it to PyPI (see the "Publishing" section of the README for the
-one-time PyPI trusted-publisher setup). Do not hand-edit a version string —
-`setup.py` reads `MSBUILD_EXTRACTOR_VERSION`, which CI sets from the tag.
+The `build-and-publish` workflow builds the `win_amd64` and
+`manylinux_2_35_x86_64` wheels from the tag and publishes both to PyPI (see
+the "Publishing" section of the README for the one-time PyPI
+trusted-publisher setup). Do not hand-edit a version string — `setup.py`
+reads `MSBUILD_EXTRACTOR_VERSION`, which CI sets from the tag.
 
 ## Building the wheel locally
 
-Requires Windows with the .NET 10 SDK (and, to *run* the tool, Visual Studio
-Build Tools with the C++ workload):
+Requires the .NET 10 SDK. To *run* the built tool, also requires Visual
+Studio Build Tools with the C++ workload (Windows) or a toolchain from
+`tools/setup-linux-toolchain.sh` (Linux) — see the README.
 
 ```powershell
+# Windows
 git submodule update --init --recursive
 pwsh packaging/python-wheel/build.ps1
+python -m build --wheel packaging/python-wheel
+```
+
+```console
+# Linux
+git submodule update --init --recursive
+packaging/python-wheel/build.sh
 python -m build --wheel packaging/python-wheel
 ```

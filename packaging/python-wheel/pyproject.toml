@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "py-msbuild-extractor"
 dynamic = ["version"]
-description = "Windows-only pip launcher bundling microsoft/msbuild-extractor-sample (generates compile_commands.json from MSBuild/.vcxproj solutions)."
+description = "Pip launcher (Windows and Linux) bundling microsoft/msbuild-extractor-sample (generates compile_commands.json from MSBuild/.vcxproj solutions)."
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
@@ -17,6 +17,7 @@ keywords = [
     "clangd",
     "compilation-database",
     "windows",
+    "linux",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,11 +25,12 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Topic :: Software Development :: Build Tools",
 ]
 
-# The entry point subprocess-forwards argv to the bundled win-x64 executable.
+# The entry point subprocess-forwards argv to the bundled native executable.
 # Named to match the package (`py-msbuild-extractor`) so `uvx py-msbuild-extractor`
 # resolves without needing `--from`.
 [project.scripts]
@@ -44,8 +46,8 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# The .exe (and the hostfxr.dll vendored alongside it) are dropped in by
-# build.ps1 before the wheel is built; the upstream license is copied alongside
-# them so the redistributed binaries carry their terms.
+# The native executable (plus hostfxr.dll on Windows, vendored alongside it)
+# is dropped in by build.ps1/build.sh before the wheel is built; the upstream
+# license is copied alongside it so the redistributed binary carries its terms.
 [tool.setuptools.package-data]
-py_msbuild_extractor = ["bin/*.exe", "bin/*.dll", "licenses/*"]
+py_msbuild_extractor = ["bin/*.exe", "bin/*.dll", "bin/msbuild-extractor", "licenses/*"]
