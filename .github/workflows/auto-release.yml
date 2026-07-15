@@ -1,0 +1,52 @@
+name: auto-release
+
+# On every push to main, create a GitHub release with an incremental tag v0.0.N.
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+
+      - name: Compute next version tag
+        id: next_tag
+        run: |
+          # Find the highest v0.0.N tag that already exists.
+          latest=$(git tag --list 'v0.0.*' \
+            | grep -E '^v0\.0\.[0-9]+$' \
+            | sort -t. -k3 -n \
+            | tail -1)
+          if [ -z "$latest" ]; then
+            next="v0.0.1"
+          else
+            n="${latest##*.}"
+            next="v0.0.$((n + 1))"
+          fi
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+          echo "Next release tag: $next"
+
+      - name: Create and push tag
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.next_tag.outputs.tag }}"
+          git push origin "${{ steps.next_tag.outputs.tag }}"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.next_tag.outputs.tag }}
+          name: Release ${{ steps.next_tag.outputs.tag }}
+          generate_release_notes: true
