@@ -17,7 +17,7 @@ as a pinned git submodule and wraps it:
 - `vendor/msbuild-extractor-sample/` — the upstream project as a git submodule,
   pinned to a specific commit (never a branch).
 - `packaging/python-wheel/` — a setuptools project that bundles a self-contained
-  win-x64 build of the tool and exposes it as the `msbuild-extractor` command.
+  win-x64 build of the tool and exposes it as the `py-msbuild-extractor` command.
 - `.github/workflows/build-and-publish.yml` — builds the wheel on
   `windows-latest` and publishes it to PyPI on version-tag pushes.
 
@@ -34,7 +34,7 @@ as a pinned git submodule and wraps it:
 ## Requirements on the machine running the tool
 
 This package redistributes **only the launcher**, not the toolchain it drives.
-The machine that runs `msbuild-extractor` must have:
+The machine that runs `py-msbuild-extractor` must have:
 
 - **Visual Studio Build Tools** (or a full Visual Studio) with the
   **"Desktop development with C++"** workload installed. The tool locates it via
@@ -64,13 +64,13 @@ workload.
 pip install py-msbuild-extractor
 ```
 
-This installs the `msbuild-extractor` console command (and
+This installs the `py-msbuild-extractor` console command (and
 `python -m py_msbuild_extractor`), which forwards its arguments straight to the
 bundled executable:
 
 ```console
-msbuild-extractor --help
-msbuild-extractor --solution path\to\MySolution.sln --output compile_commands.json
+py-msbuild-extractor --help
+py-msbuild-extractor --solution path\to\MySolution.sln --output compile_commands.json
 ```
 
 Only `win_amd64` (64-bit Windows) is supported; pip on other platforms will
