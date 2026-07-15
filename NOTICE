@@ -1,10 +1,10 @@
 py-msbuild-extractor
 ====================
 
-This repository packages and redistributes third-party software. The wheel it
-produces bundles a compiled, self-contained win-x64 build of the project listed
-below (plus one supporting native library); this NOTICE and the upstream
-license travel with that redistribution.
+This repository packages and redistributes third-party software. The wheels it
+produces bundle a compiled, self-contained build of the project listed below
+(win-x64 and linux-x64; the win-x64 wheel also carries one supporting native
+library); this NOTICE and the upstream license travel with that redistribution.
 
 --------------------------------------------------------------------------------
 msbuild-extractor-sample
@@ -18,7 +18,7 @@ wheel at py_msbuild_extractor/licenses/msbuild-extractor-sample-LICENSE.txt and
 retained in the vendored submodule at vendor/msbuild-extractor-sample/LICENSE.
 
 --------------------------------------------------------------------------------
-hostfxr.dll (.NET runtime host resolver)
+hostfxr.dll (.NET runtime host resolver) -- win_amd64 wheel only
 --------------------------------------------------------------------------------
 Source:  https://github.com/dotnet/runtime
 License: MIT
@@ -30,6 +30,12 @@ packaging/python-wheel/patches/README.md for details); the self-contained
 single-file publish of msbuild-extractor-sample does not otherwise produce a
 loadable copy of it. The dotnet/runtime MIT license text is the same as the
 one reproduced below.
+
+The linux-x64 wheel does not vendor an equivalent library: Microsoft.Build.Locator's
+.NET SDK discovery on Linux resolves libhostfxr.so by shelling out to `dotnet`
+on PATH rather than P/Invoking a loadable host library, so a system-wide .NET
+SDK install (e.g. `apt install dotnet-sdk-10.0`) is required at run time
+instead. See the top-level README's "Linux" section.
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

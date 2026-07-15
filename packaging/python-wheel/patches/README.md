@@ -5,10 +5,11 @@ commit in https://github.com/microsoft/msbuild-extractor-sample. We don't
 have write access there, so fixes that can't wait for an upstream PR to land
 (and get re-pinned) live here as patches instead.
 
-`build.ps1` applies every `*.patch` file in this directory to the submodule's
-working tree before running `dotnet publish`, then reverts them (`git
-checkout -- .` inside the submodule) once publishing finishes, so the
-submodule stays pinned to its pristine upstream commit in git history.
+`build.ps1` (Windows) and `build.sh` (Linux) each apply every `*.patch` file
+in this directory to the submodule's working tree before running `dotnet
+publish`, then revert them (`git checkout -- .` inside the submodule) once
+publishing finishes, so the submodule stays pinned to its pristine upstream
+commit in git history.
 
 ## 0001-msbuild-locator-hostfxr-fallback.patch
 

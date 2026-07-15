@@ -1,8 +1,8 @@
 name: build-and-publish
 
-# Builds the Windows wheel on every push/PR. On a version tag (v*), the built
-# wheel is published to PyPI. The wheel version is derived from the tag so it
-# never drifts from the release.
+# Builds the Windows and Linux wheels on every push/PR. On a version tag (v*),
+# both built wheels are published to PyPI. The wheel version is derived from
+# the tag so it never drifts from the release.
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-windows:
     name: Build win_amd64 wheel
     runs-on: windows-latest
     env:
@@ -78,24 +78,89 @@ jobs:
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wheel
+          name: wheel-windows
+          path: packaging/python-wheel/dist/*.whl
+          if-no-files-found: error
+
+  build-linux:
+    name: Build manylinux wheel
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - name: Checkout (with vendored submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve version from tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            v="${GITHUB_REF#refs/tags/v}"
+          else
+            v="0.0.0.dev0"
+          fi
+          if [[ -z "$v" ]]; then echo "Version not resolved" >&2; exit 1; fi
+          # Single-sourced version consumed by setup.py for the wheel metadata.
+          echo "MSBUILD_EXTRACTOR_VERSION=$v" >> "$GITHUB_ENV"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Building version $v"
+
+      - name: Build bundled linux-x64 executable
+        working-directory: packaging/python-wheel
+        run: ./build.sh
+
+      - name: Build wheel
+        working-directory: packaging/python-wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist
+          ls dist
+
+      - name: Verify wheel platform tag
+        working-directory: packaging/python-wheel
+        run: |
+          wheel=$(ls dist/*.whl | head -1)
+          echo "Built: $wheel"
+          if [[ "$wheel" != *manylinux* ]]; then
+            echo "Expected a manylinux platform wheel, got '$wheel'." >&2
+            exit 1
+          fi
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-linux
           path: packaging/python-wheel/dist/*.whl
           if-no-files-found: error
 
   publish:
     name: Publish to PyPI
-    needs: build
+    needs: [build-windows, build-linux]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write # OIDC token for PyPI trusted publishing
     steps:
-      - name: Download wheel artifact
+      - name: Download wheel artifacts
         uses: actions/download-artifact@v4
         with:
-          name: wheel
+          pattern: wheel-*
           path: dist
+          merge-multiple: true
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
