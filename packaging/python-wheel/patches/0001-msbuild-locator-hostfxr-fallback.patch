@@ -1,0 +1,80 @@
+diff --git a/Program.cs b/Program.cs
+index b7a3ebb..cce8c43 100644
+--- a/Program.cs
++++ b/Program.cs
+@@ -519,29 +519,66 @@ namespace MSBuild.CompileCommands.Extractor
+                     }
+                 }
+ 
+-                Console.Error.WriteLine($"Warning: Could not find MSBuild in {vsPath}, falling back to discovery");
++                Console.Error.WriteLine($"Warning: Could not find MSBuild.dll under {vsPath} (tried: {string.Join(", ", possiblePaths)}), falling back to discovery");
+             }
+ 
+-            var instances = MSBuildLocator.QueryVisualStudioInstances()
+-                .Where(i => i.DiscoveryType == DiscoveryType.VisualStudioSetup)
+-                .OrderByDescending(i => i.Version)
+-                .ToList();
++            // MSBuildLocator's fallback discovery also probes the .NET SDK via hostfxr.
++            // That native host isn't resolvable from a self-contained single-file publish
++            // (there's no separate hostfxr.dll to load, and no system-wide dotnet install to
++            // fall back to), so every call below can throw DllNotFoundException instead of
++            // just returning zero instances. Treat that the same as "nothing found" so we
++            // still print an actionable error rather than an unhandled stack trace.
++            List<VisualStudioInstance> instances;
++            try
++            {
++                instances = MSBuildLocator.QueryVisualStudioInstances()
++                    .Where(i => i.DiscoveryType == DiscoveryType.VisualStudioSetup)
++                    .OrderByDescending(i => i.Version)
++                    .ToList();
++            }
++            catch (DllNotFoundException)
++            {
++                instances = new List<VisualStudioInstance>();
++            }
+ 
+             if (enableLogger)
+             {
+                 Console.WriteLine("MSBuild Discovery:");
+-                foreach (var inst in MSBuildLocator.QueryVisualStudioInstances())
++                try
+                 {
+-                    var marker = instances.Count > 0 && inst == instances[0] ? " <-- selected" : "";
+-                    Console.WriteLine($"  [{inst.DiscoveryType}] {inst.Name} v{inst.Version} @ {inst.MSBuildPath}{marker}");
++                    foreach (var inst in MSBuildLocator.QueryVisualStudioInstances())
++                    {
++                        var marker = instances.Count > 0 && inst == instances[0] ? " <-- selected" : "";
++                        Console.WriteLine($"  [{inst.DiscoveryType}] {inst.Name} v{inst.Version} @ {inst.MSBuildPath}{marker}");
++                    }
++                }
++                catch (DllNotFoundException)
++                {
++                    Console.WriteLine("  (.NET SDK discovery unavailable: hostfxr could not be loaded)");
+                 }
+                 Console.WriteLine();
+             }
+ 
+             if (instances.Count > 0)
++            {
+                 MSBuildLocator.RegisterInstance(instances[0]);
+-            else
++                return;
++            }
++
++            try
++            {
+                 MSBuildLocator.RegisterDefaults();
++            }
++            catch (DllNotFoundException)
++            {
++                Console.Error.WriteLine(
++                    "Error: Could not locate an MSBuild installation. Automatic discovery via " +
++                    "the .NET SDK is unavailable in this build, and no usable MSBuild was found " +
++                    "via Visual Studio detection. Pass --vs-path pointing at your Visual Studio " +
++                    "installation root (e.g. \"C:\\Program Files\\Microsoft Visual Studio\\2022\\Professional\"), " +
++                    "or install the Visual Studio Build Tools with the \"Desktop development with C++\" workload.");
++                Environment.Exit(1);
++            }
+         }
+ 
+         private static MsBuildLauncher ParseLauncher(string s) => s.ToLowerInvariant() switch

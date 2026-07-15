@@ -35,14 +35,27 @@ To bump to a new upstream commit:
    - `NOTICE` (the "Vendored at commit" line)
    - `README.md` (the "Pinned upstream commit" section)
 
-4. Commit with a message that records the old → new SHA and a one-line summary
+4. Check whether `packaging/python-wheel/patches/*.patch` still apply cleanly
+   against the new commit (`build.ps1` will fail loudly if not):
+
+   ```bash
+   for p in packaging/python-wheel/patches/*.patch; do
+       git -C vendor/msbuild-extractor-sample apply --check "$p" || echo "NEEDS REBASE: $p"
+   done
+   ```
+
+   If a patch no longer applies, rebase it against the new commit (or drop it
+   if upstream already fixed the underlying issue) and update
+   `packaging/python-wheel/patches/README.md` accordingly.
+
+5. Commit with a message that records the old → new SHA and a one-line summary
    of why, then open a pull request for review:
 
    ```bash
    git commit -m "Bump msbuild-extractor-sample to <NEW_SHA> (<upstream tag/reason>)"
    ```
 
-5. Cut a new release tag (`vX.Y.Z`) once merged — see below.
+6. Cut a new release tag (`vX.Y.Z`) once merged — see below.
 
 ## Cutting a release
 
