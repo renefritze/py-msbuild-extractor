@@ -29,8 +29,10 @@ classifiers = [
 ]
 
 # The entry point subprocess-forwards argv to the bundled win-x64 executable.
+# Named to match the package (`py-msbuild-extractor`) so `uvx py-msbuild-extractor`
+# resolves without needing `--from`.
 [project.scripts]
-msbuild-extractor = "py_msbuild_extractor._launcher:main"
+py-msbuild-extractor = "py_msbuild_extractor._launcher:main"
 
 [project.urls]
 Homepage = "https://github.com/renefritze/py-msbuild-extractor"

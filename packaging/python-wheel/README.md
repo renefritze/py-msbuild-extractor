@@ -2,13 +2,13 @@
 
 Windows-only pip launcher that bundles a self-contained win-x64 build of
 [`microsoft/msbuild-extractor-sample`](https://github.com/microsoft/msbuild-extractor-sample)
-and exposes it as the `msbuild-extractor` command. It generates
+and exposes it as the `py-msbuild-extractor` command. It generates
 `compile_commands.json` from Visual C++ MSBuild projects (`.vcxproj`, `.sln`,
 `.slnx`).
 
 ```console
 pip install py-msbuild-extractor
-msbuild-extractor --help
+py-msbuild-extractor --help
 ```
 
 This wheel only redistributes the launcher. The machine running it must have
