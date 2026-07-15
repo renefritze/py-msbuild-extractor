@@ -3,7 +3,8 @@ py-msbuild-extractor
 
 This repository packages and redistributes third-party software. The wheel it
 produces bundles a compiled, self-contained win-x64 build of the project listed
-below; this NOTICE and the upstream license travel with that redistribution.
+below (plus one supporting native library); this NOTICE and the upstream
+license travel with that redistribution.
 
 --------------------------------------------------------------------------------
 msbuild-extractor-sample
@@ -15,6 +16,20 @@ License:            MIT
 The upstream MIT license text is reproduced below. It is also shipped inside the
 wheel at py_msbuild_extractor/licenses/msbuild-extractor-sample-LICENSE.txt and
 retained in the vendored submodule at vendor/msbuild-extractor-sample/LICENSE.
+
+--------------------------------------------------------------------------------
+hostfxr.dll (.NET runtime host resolver)
+--------------------------------------------------------------------------------
+Source:  https://github.com/dotnet/runtime
+License: MIT
+
+`build.ps1` copies hostfxr.dll from the .NET SDK used to build the wheel and
+ships it as bin/hostfxr.dll, next to msbuild-extractor.exe. It is required for
+Microsoft.Build.Locator's .NET SDK discovery (see
+packaging/python-wheel/patches/README.md for details); the self-contained
+single-file publish of msbuild-extractor-sample does not otherwise produce a
+loadable copy of it. The dotnet/runtime MIT license text is the same as the
+one reproduced below.
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
