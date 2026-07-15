@@ -41,17 +41,20 @@ The machine that runs `py-msbuild-extractor` must have:
   `vswhere.exe` and invokes `cl.exe` and the MSVC MSBuild targets.
 
 No .NET runtime is required on the target machine — the bundled executable is a
-self-contained single-file win-x64 build.
+self-contained single-file win-x64 build. It ships with its own `hostfxr.dll`
+(see below) purely so Microsoft.Build.Locator's .NET SDK discovery has
+something to load; it doesn't depend on anything installed system-wide.
 
 ### Troubleshooting: MSBuild not found
 
 If `msbuild-extractor` can't find MSBuild via your Visual Studio install path,
-it now prints an actionable error (which paths it tried, and how to point it
-at the right install) instead of crashing with a raw
+it prints an actionable error (which paths it tried, and how to point it at
+the right install) instead of crashing with a raw
 `DllNotFoundException`/`hostfxr` stack trace — see
 [the patch notes](packaging/python-wheel/patches/README.md) for why that
-crash could happen. If you hit it, pass `--vs-path` pointing at
-your Visual Studio installation root (e.g.
+crash could happen and how the vendored `hostfxr.dll` (below) fixes the root
+cause. If you still hit it, pass `--vs-path` pointing at your Visual Studio
+installation root (e.g.
 `"C:\Program Files\Microsoft Visual Studio\2022\Professional"`), or install
 the Visual Studio Build Tools with the "Desktop development with C++"
 workload.
@@ -104,6 +107,13 @@ only the *build output* reflects the patch. See
 [`packaging/python-wheel/patches/README.md`](packaging/python-wheel/patches/README.md)
 for what's patched and why.
 
+`build.ps1` also copies a real `hostfxr.dll` from the .NET SDK doing the build
+next to `msbuild-extractor.exe`. A self-contained `PublishSingleFile=true`
+publish statically links `hostfxr` into the apphost instead of shipping it as
+a loadable DLL, so without this step there's no `hostfxr.dll` anywhere for
+Microsoft.Build.Locator's .NET SDK discovery to `P/Invoke` into — see the
+patch notes above for the full story.
+
 ## How it is built
 
 `packaging/python-wheel/build.ps1` runs:
@@ -114,10 +124,11 @@ dotnet publish vendor/msbuild-extractor-sample/msbuild-extractor-sample.csproj \
     /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
-and drops the resulting `msbuild-extractor.exe` (plus the upstream license) into
-the wheel's package-data directory. `python -m build --wheel` then produces the
-`win_amd64` wheel. A custom `bdist_wheel` in `setup.py` forces the platform tag
-so setuptools does not mislabel the binary-bearing wheel as pure Python.
+and drops the resulting `msbuild-extractor.exe` — plus a vendored `hostfxr.dll`
+and the upstream license — into the wheel's package-data directory.
+`python -m build --wheel` then produces the `win_amd64` wheel. A custom
+`bdist_wheel` in `setup.py` forces the platform tag so setuptools does not
+mislabel the binary-bearing wheel as pure Python.
 
 Build it yourself on Windows (requires the .NET 10 SDK):
 
@@ -152,3 +163,5 @@ publish step.)
 - This wrapper repository: MIT — see [`LICENSE`](LICENSE).
 - Vendored/redistributed `msbuild-extractor-sample`: MIT (Microsoft) — see
   [`NOTICE`](NOTICE) and `vendor/msbuild-extractor-sample/LICENSE`.
+- Vendored `hostfxr.dll` (from [`dotnet/runtime`](https://github.com/dotnet/runtime)):
+  MIT — see [`NOTICE`](NOTICE).

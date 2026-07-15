@@ -29,3 +29,18 @@ The patch wraps those MSBuildLocator calls in `try`/`catch (DllNotFoundException
 and, if nothing can be found at all, prints an actionable message (pass
 `--vs-path`, or install the VS Build Tools C++ workload) and exits with a
 non-zero code instead of dumping a raw stack trace.
+
+## Vendored hostfxr.dll
+
+`build.ps1` also copies a real `hostfxr.dll` (from the .NET SDK doing the
+build) next to `msbuild-extractor.exe` in the wheel's `bin/` directory — see
+the "Local patches to the vendored sources" section of the top-level
+`README.md`. That fixes the actual root cause described above: once a
+loadable `hostfxr.dll` sits next to the exe, Windows' default DLL search
+order (application directory first) lets Microsoft.Build.Locator's P/Invoke
+resolve it, so .NET SDK discovery works instead of throwing
+`DllNotFoundException`. The `try`/`catch` in this patch stays in place as a
+defense-in-depth fallback in case that DLL is missing or fails to load for
+some other environmental reason (e.g. it was stripped by an antivirus or
+repackaging step) — in that case the tool still degrades to a clear error
+instead of an unhandled crash.

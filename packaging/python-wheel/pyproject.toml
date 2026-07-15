@@ -44,7 +44,8 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# The .exe is dropped in by build.ps1 before the wheel is built; the upstream
-# license is copied alongside it so the redistributed binary carries its terms.
+# The .exe (and the hostfxr.dll vendored alongside it) are dropped in by
+# build.ps1 before the wheel is built; the upstream license is copied alongside
+# them so the redistributed binaries carry their terms.
 [tool.setuptools.package-data]
-py_msbuild_extractor = ["bin/*.exe", "licenses/*"]
+py_msbuild_extractor = ["bin/*.exe", "bin/*.dll", "licenses/*"]
