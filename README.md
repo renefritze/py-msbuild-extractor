@@ -43,6 +43,19 @@ The machine that runs `msbuild-extractor` must have:
 No .NET runtime is required on the target machine — the bundled executable is a
 self-contained single-file win-x64 build.
 
+### Troubleshooting: MSBuild not found
+
+If `msbuild-extractor` can't find MSBuild via your Visual Studio install path,
+it now prints an actionable error (which paths it tried, and how to point it
+at the right install) instead of crashing with a raw
+`DllNotFoundException`/`hostfxr` stack trace — see
+[the patch notes](packaging/python-wheel/patches/README.md) for why that
+crash could happen. If you hit it, pass `--vs-path` pointing at
+your Visual Studio installation root (e.g.
+`"C:\Program Files\Microsoft Visual Studio\2022\Professional"`), or install
+the Visual Studio Build Tools with the "Desktop development with C++"
+workload.
+
 ## Installation
 
 ### pip (Python wheel)
@@ -77,6 +90,19 @@ The vendored submodule is pinned to:
 We pin to a commit and never track a branch. **Bumping the pin is a deliberate,
 human-reviewed action** — see [`CONTRIBUTING.md`](CONTRIBUTING.md). CI never
 advances the submodule on its own.
+
+## Local patches to the vendored sources
+
+We don't fork or carry a divergent copy of the upstream tool — the submodule
+pin always points at a real upstream commit. But occasionally a bug needs
+fixing sooner than an upstream PR can land and get re-pinned. For those cases,
+`packaging/python-wheel/patches/*.patch` are applied to the submodule's
+working tree by `build.ps1` right before `dotnet publish`, then reverted
+(`git checkout -- .` inside the submodule) once publishing finishes — so the
+submodule stays pinned to its pristine upstream commit in git history, and
+only the *build output* reflects the patch. See
+[`packaging/python-wheel/patches/README.md`](packaging/python-wheel/patches/README.md)
+for what's patched and why.
 
 ## How it is built
 
