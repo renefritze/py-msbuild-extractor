@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   release:
@@ -50,3 +51,12 @@ jobs:
           tag_name: ${{ steps.next_tag.outputs.tag }}
           name: Release ${{ steps.next_tag.outputs.tag }}
           generate_release_notes: true
+
+      - name: Trigger wheel build and publish for the new tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Tags pushed with the default GITHUB_TOKEN don't fire other workflows'
+          # `on.push.tags` triggers (GitHub's anti-recursion rule), so
+          # build-and-publish.yml must be dispatched explicitly here.
+          gh workflow run build-and-publish.yml --ref "${{ steps.next_tag.outputs.tag }}"
