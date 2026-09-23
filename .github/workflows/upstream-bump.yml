@@ -1,0 +1,197 @@
+name: upstream-bump
+
+# Every other week, check microsoft/msbuild-extractor-sample for a newer
+# release tag (vX.Y.Z) than the one the submodule is pinned to. If there is
+# one, move the pin to that tag's commit, sync the pin references in the docs,
+# and open a pull request for human review. Nothing is merged automatically.
+
+on:
+  schedule:
+    # GitHub cron has no "every other week", so this fires every Monday and
+    # the gate step below skips odd ISO weeks.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: upstream-bump
+  cancel-in-progress: false
+
+env:
+  SUBMODULE: vendor/msbuild-extractor-sample
+  UPSTREAM_URL: https://github.com/microsoft/msbuild-extractor-sample.git
+
+jobs:
+  bump:
+    name: Check upstream for a new release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip odd weeks
+        id: gate
+        run: |
+          week=$((10#$(date -u +%V)))
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" && $((week % 2)) -ne 0 ]]; then
+            echo "ISO week $week is odd; skipping scheduled run."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Find latest upstream release
+        if: steps.gate.outputs.run == 'true'
+        id: check
+        run: |
+          current_sha=$(git ls-tree HEAD "$SUBMODULE" | awk '{print $3}')
+          if [[ -z "$current_sha" ]]; then
+            echo "Could not read the submodule pin for $SUBMODULE" >&2
+            exit 1
+          fi
+
+          tags=$(git ls-remote --tags "$UPSTREAM_URL")
+          latest_tag=$(awk '{print $2}' <<<"$tags" \
+            | sed -n 's#^refs/tags/\(v[0-9]\+\.[0-9]\+\.[0-9]\+\)$#\1#p' \
+            | sort -V | tail -1)
+          if [[ -z "$latest_tag" ]]; then
+            echo "No vX.Y.Z tags found upstream; nothing to do."
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Annotated tags list the tag object plus a peeled "^{}" commit line;
+          # lightweight tags list the commit directly.
+          latest_sha=$(awk -v r="refs/tags/${latest_tag}^{}" '$2 == r {print $1}' <<<"$tags")
+          if [[ -z "$latest_sha" ]]; then
+            latest_sha=$(awk -v r="refs/tags/${latest_tag}" '$2 == r {print $1}' <<<"$tags")
+          fi
+
+          # Name the current pin by its tag, if it has one.
+          current_tag=$(awk -v s="$current_sha" '$1 == s {print $2}' <<<"$tags" \
+            | sed -n 's#^refs/tags/\([^^]*\)\(\^{}\)\?$#\1#p' | sort -V | tail -1)
+
+          echo "Current pin: $current_sha (${current_tag:-untagged})"
+          echo "Latest upstream release: $latest_tag -> $latest_sha"
+
+          {
+            echo "current_sha=$current_sha"
+            echo "current_tag=$current_tag"
+            echo "new_sha=$latest_sha"
+            echo "new_tag=$latest_tag"
+            echo "branch=upstream-bump/$latest_tag"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ "$latest_sha" == "$current_sha" ]]; then
+            echo "Already pinned to the latest release."
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git ls-remote --exit-code --heads origin "upstream-bump/$latest_tag" >/dev/null; then
+            echo "Branch upstream-bump/$latest_tag already exists; a PR is presumably open."
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "bump=true" >> "$GITHUB_OUTPUT"
+
+      - name: Move the submodule pin and sync docs
+        if: steps.check.outputs.bump == 'true'
+        env:
+          OLD_SHA: ${{ steps.check.outputs.current_sha }}
+          NEW_SHA: ${{ steps.check.outputs.new_sha }}
+          NEW_TAG: ${{ steps.check.outputs.new_tag }}
+        run: |
+          # Full (non-shallow) submodule clone so we can log old..new.
+          git submodule update --init "$SUBMODULE"
+          git -C "$SUBMODULE" fetch --tags origin
+          git -C "$SUBMODULE" checkout --quiet "$NEW_SHA"
+
+          # The pin references listed in CONTRIBUTING.md step 3.
+          sed -i "s|^Vendored at commit: .*|Vendored at commit: $NEW_SHA (tag $NEW_TAG)|" NOTICE
+          sed -i -e "s#^| Commit | .*#| Commit | \`$NEW_SHA\` |#" \
+                 -e "s#^| Tag | .*#| Tag | \`$NEW_TAG\` |#" README.md
+          sed -i -e "s|^Current pin: .*|Current pin: **\`$NEW_SHA\`** (tag \`$NEW_TAG\`).|" \
+                 -e "s|log --oneline [0-9a-f]\{7,40\}\.\.origin/main|log --oneline ${NEW_SHA:0:7}..origin/main|" \
+                 CONTRIBUTING.md
+
+          for f in NOTICE README.md CONTRIBUTING.md; do
+            grep -q "$NEW_SHA" "$f" || { echo "Failed to update pin in $f" >&2; exit 1; }
+          done
+
+          # Collect material for the PR body.
+          {
+            echo "### Upstream commits"
+            echo
+            echo '```'
+            git -C "$SUBMODULE" log --oneline --no-decorate "$OLD_SHA..$NEW_SHA"
+            echo '```'
+            echo
+            echo "### Local patches"
+            echo
+            for p in packaging/python-wheel/patches/*.patch; do
+              [[ -e "$p" ]] || continue
+              if git -C "$SUBMODULE" apply --check "$GITHUB_WORKSPACE/$p" 2>/dev/null; then
+                echo "- :white_check_mark: \`$(basename "$p")\` applies cleanly"
+              else
+                echo "- :x: \`$(basename "$p")\` **no longer applies** — rebase or drop it (see \`packaging/python-wheel/patches/README.md\`)"
+              fi
+            done
+          } > "$RUNNER_TEMP/details.md"
+          cat "$RUNNER_TEMP/details.md"
+
+      - name: Commit, push, and open a pull request
+        if: steps.check.outputs.bump == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLD_SHA: ${{ steps.check.outputs.current_sha }}
+          OLD_TAG: ${{ steps.check.outputs.current_tag }}
+          NEW_SHA: ${{ steps.check.outputs.new_sha }}
+          NEW_TAG: ${{ steps.check.outputs.new_tag }}
+          BRANCH: ${{ steps.check.outputs.branch }}
+          ASSIGNEE: ${{ github.repository_owner }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "$SUBMODULE" NOTICE README.md CONTRIBUTING.md
+          git commit -m "Bump msbuild-extractor-sample to $NEW_SHA ($NEW_TAG)" \
+                     -m "Previous pin: $OLD_SHA${OLD_TAG:+ ($OLD_TAG)}."
+          git push origin "$BRANCH"
+
+          {
+            echo "Upstream [\`microsoft/msbuild-extractor-sample\`](https://github.com/microsoft/msbuild-extractor-sample) has a new release: **$NEW_TAG**."
+            echo
+            echo "| | Commit | Tag |"
+            echo "|---|---|---|"
+            echo "| Old pin | \`$OLD_SHA\` | ${OLD_TAG:-—} |"
+            echo "| New pin | \`$NEW_SHA\` | $NEW_TAG |"
+            echo
+            echo "Compare: https://github.com/microsoft/msbuild-extractor-sample/compare/$OLD_SHA...$NEW_SHA"
+            echo
+            cat "$RUNNER_TEMP/details.md"
+            echo
+            echo "### Review checklist (CONTRIBUTING.md)"
+            echo
+            echo "- [ ] Upstream changes reviewed and the release looks stable"
+            echo "- [ ] Local patches still apply (or were rebased/dropped)"
+            echo "- [ ] Wheel builds pass on Windows and Linux"
+            echo
+            echo "_Opened automatically by the \`upstream-bump\` workflow._"
+          } > "$RUNNER_TEMP/body.md"
+
+          gh pr create \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$BRANCH" \
+            --title "Bump msbuild-extractor-sample to $NEW_TAG" \
+            --body-file "$RUNNER_TEMP/body.md" \
+            --assignee "$ASSIGNEE"
+
+          # Pushes and PRs made with the default GITHUB_TOKEN don't fire other
+          # workflows' push/pull_request triggers, so dispatch the wheel build
+          # explicitly; its checks attach to the branch's head commit.
+          gh workflow run build-and-publish.yml --ref "$BRANCH"

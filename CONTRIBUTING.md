@@ -5,9 +5,17 @@
 This repository pins
 [`microsoft/msbuild-extractor-sample`](https://github.com/microsoft/msbuild-extractor-sample)
 to a **specific commit** via the git submodule at
-`vendor/msbuild-extractor-sample`. We never track a branch, and CI never bumps
-the submodule automatically — a human reviews upstream changes before we pull
+`vendor/msbuild-extractor-sample`. We never track a branch, and CI never
+merges a bump on its own — a human reviews upstream changes before we pull
 them in.
+
+Every other Monday the `upstream-bump` workflow
+(`.github/workflows/upstream-bump.yml`) checks upstream for a newer `vX.Y.Z`
+release tag. If it finds one, it performs steps 2–3 below, reports whether the
+local patches still apply (step 4), and opens a pull request assigned to the
+repo owner for review. It can also be run on demand from the Actions tab. The
+manual steps below remain the way to adopt an untagged commit or to finish a
+bump whose patches need rebasing.
 
 Current pin: **`4ae6d2f344424a4eb408d88c614b1a73a7e48045`** (tag `v0.2.0`).
 
