@@ -19,6 +19,8 @@ as a pinned git submodule and wraps it:
 - `packaging/python-wheel/` — a setuptools project that bundles a self-contained
   win-x64 or linux-x64 build of the tool and exposes it as the
   `py-msbuild-extractor` command.
+- `.github/workflows/upstream-bump.yml` — every other week, opens a pull
+  request moving the submodule pin to upstream's latest release tag.
 - `.github/workflows/build-and-publish.yml` — builds both wheels (on
   `windows-latest` and `ubuntu-latest`) and publishes them to PyPI on
   version-tag pushes.
@@ -147,8 +149,9 @@ The vendored submodule is pinned to:
 | License | MIT (see [`NOTICE`](NOTICE)) |
 
 We pin to a commit and never track a branch. **Bumping the pin is a deliberate,
-human-reviewed action** — see [`CONTRIBUTING.md`](CONTRIBUTING.md). CI never
-advances the submodule on its own.
+human-reviewed action** — see [`CONTRIBUTING.md`](CONTRIBUTING.md). CI only
+*proposes* bumps: every other week the `upstream-bump` workflow opens a pull
+request when upstream publishes a new release tag; it never merges one itself.
 
 ## Local patches to the vendored sources
 
