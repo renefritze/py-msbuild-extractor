@@ -144,8 +144,8 @@ The vendored submodule is pinned to:
 | | |
 |---|---|
 | Upstream | https://github.com/microsoft/msbuild-extractor-sample |
-| Commit | `4ae6d2f344424a4eb408d88c614b1a73a7e48045` |
-| Tag | `v0.2.0` |
+| Commit | `ac8ed80b4f6b944d3ca36e5847f370a6d53b69e5` |
+| Tag | `v0.3.0` |
 | License | MIT (see [`NOTICE`](NOTICE)) |
 
 We pin to a commit and never track a branch. **Bumping the pin is a deliberate,
