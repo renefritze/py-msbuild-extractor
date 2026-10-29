@@ -10,7 +10,7 @@ library); this NOTICE and the upstream license travel with that redistribution.
 msbuild-extractor-sample
 --------------------------------------------------------------------------------
 Source:             https://github.com/microsoft/msbuild-extractor-sample
-Vendored at commit: 4ae6d2f344424a4eb408d88c614b1a73a7e48045 (tag v0.2.0)
+Vendored at commit: ac8ed80b4f6b944d3ca36e5847f370a6d53b69e5 (tag v0.3.0)
 License:            MIT
 
 The upstream MIT license text is reproduced below. It is also shipped inside the

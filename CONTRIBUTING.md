@@ -17,7 +17,7 @@ repo owner for review. It can also be run on demand from the Actions tab. The
 manual steps below remain the way to adopt an untagged commit or to finish a
 bump whose patches need rebasing.
 
-Current pin: **`4ae6d2f344424a4eb408d88c614b1a73a7e48045`** (tag `v0.2.0`).
+Current pin: **`ac8ed80b4f6b944d3ca36e5847f370a6d53b69e5`** (tag `v0.3.0`).
 
 To bump to a new upstream commit:
 
@@ -25,7 +25,7 @@ To bump to a new upstream commit:
 
    ```bash
    git -C vendor/msbuild-extractor-sample fetch origin
-   git -C vendor/msbuild-extractor-sample log --oneline 4ae6d2f..origin/main
+   git -C vendor/msbuild-extractor-sample log --oneline ac8ed80..origin/main
    ```
 
    Prefer a tagged release commit over an arbitrary `main` HEAD. Confirm the
